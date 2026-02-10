@@ -1,0 +1,339 @@
+#!/bin/bash
+
+# Parspack DNS challenge for certbot - single script
+#
+# Gets SSL certificates from Let's Encrypt via Parspack DNS API.
+# Domains must exist in your Parspack dashboard first.
+
+API_BASE="https://my.parspack.com/cdnapi/external/api"
+API_TOKEN="your-parspack-cdn-api-token"
+
+SCRIPT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "$0")"
+
+check_prerequisites() {
+  local skip_certbot="$1"
+
+  if [ -z "$API_TOKEN" ]; then
+    echo "Error: API_TOKEN is empty. Set it in the script."
+    exit 1
+  fi
+  if ! command -v curl &>/dev/null; then
+    echo "Error: curl not found. Install: sudo apt install curl"
+    exit 1
+  fi
+  if ! command -v python3 &>/dev/null; then
+    echo "Error: python3 not found. Install: sudo apt install python3"
+    exit 1
+  fi
+  if [ "$skip_certbot" != "1" ] && ! command -v certbot &>/dev/null; then
+    echo "Error: certbot not found. Install: sudo apt install certbot"
+    exit 1
+  fi
+}
+
+show_help() {
+  cat << 'EOF'
+parspackCERT – Automated SSL Certificates for Parspack CDN
+by A.Zolfaghar
+
+USAGE
+  ./parspackCERT -d DOMAIN [-d DOMAIN ...] [CERTBOT_OPTIONS]
+
+DOMAIN FORMATS (same as certbot)
+  -d DOMAIN           Add domain(s). Use multiple -d for multiple domains.
+  -d "*.example.com"  Wildcard subdomain (covers any subdomain)
+  -d "a,b,c.com"      Comma-separated list (alternative to multiple -d)
+
+EXAMPLES
+  # Apex domain only
+  ./parspackCERT -d "yourdomain.com"
+
+  # Wildcard + apex (covers yourdomain.com and *.yourdomain.com)
+  ./parspackCERT -d "*.yourdomain.com" -d "yourdomain.com"
+
+  # Multiple domains
+  ./parspackCERT -d "www.example.com" -d "api.example.com" -d "example.com"
+
+  # With certbot options (all passed through)
+  ./parspackCERT -d "example.com" --dry-run
+  ./parspackCERT -d "example.com" --force-renewal
+
+REQUIREMENTS
+  - Domain must exist in Parspack dashboard
+  - Set API_TOKEN in the script
+  - certbot must be installed (sudo apt install certbot)
+  - python3 must be installed (sudo apt install python3)
+
+CERTIFICATES
+  Saved to: /etc/letsencrypt/live/<cert_name>/
+  Auto-renewal: certbot timer (twice daily)
+EOF
+}
+
+# Run API request and set REPLY (body), HTTP_CODE, CURL_EXIT
+# Usage: api_request METHOD URL [extra-curl-args]
+api_request() {
+  local method="$1"
+  local url="$2"
+  shift 2
+  CURL_EXIT=0
+  HTTP_CODE=0
+  REPLY=""
+  case "$method" in
+    GET)
+      REPLY=$(curl -s -w "\n%{http_code}" --connect-timeout 10 --max-time 30 \
+        --location "$url" \
+        --header 'Accept: application/json' \
+        --header "Authorization: Bearer $API_TOKEN" \
+        "$@" 2>/dev/null) || CURL_EXIT=$?
+      ;;
+    POST)
+      REPLY=$(curl -s -w "\n%{http_code}" --connect-timeout 10 --max-time 30 \
+        -X POST --location "$url" \
+        --header 'Accept: application/json' \
+        --header "Authorization: Bearer $API_TOKEN" \
+        --header 'Content-Type: application/json' \
+        "$@" 2>/dev/null) || CURL_EXIT=$?
+      ;;
+    DELETE)
+      REPLY=$(curl -s -w "\n%{http_code}" --connect-timeout 10 --max-time 30 \
+        -X DELETE --location "$url" \
+        --header 'Accept: application/json' \
+        --header "Authorization: Bearer $API_TOKEN" \
+        --header 'Content-Type: application/json' \
+        "$@" 2>/dev/null) || CURL_EXIT=$?
+      ;;
+    *)
+      echo "Error: Invalid API method: $method"
+      exit 1
+      ;;
+  esac
+  HTTP_CODE=$(echo "$REPLY" | tail -1)
+  REPLY=$(echo "$REPLY" | sed '$d')
+}
+
+# Parse API error and print message, exit 1
+api_error() {
+  local context="$1"
+  if [ "$CURL_EXIT" -ne 0 ]; then
+    echo "Error ($context): Connection failed. Check your network or API URL."
+    exit 1
+  fi
+  if [ "$HTTP_CODE" = "000" ]; then
+    echo "Error ($context): Connection failed. Could not reach the API server."
+    exit 1
+  fi
+  if [ "$HTTP_CODE" = "401" ]; then
+    echo "Error ($context): Invalid or expired API token."
+    exit 1
+  fi
+  if [ "$HTTP_CODE" = "403" ]; then
+    echo "Error ($context): Access denied. Token may not have required permissions."
+    exit 1
+  fi
+  if [ "$HTTP_CODE" = "404" ]; then
+    echo "Error ($context): Zone not found."
+    exit 1
+  fi
+  if [ "$HTTP_CODE" -ge 500 ]; then
+    echo "Error ($context): API server error (HTTP $HTTP_CODE). Try again later."
+    exit 1
+  fi
+  if [ "$HTTP_CODE" -ge 400 ]; then
+    local msg
+    msg=$(echo "$REPLY" | python3 -c "
+import json,sys
+try:
+    d=json.load(sys.stdin)
+    print(d.get('message','') or '')
+except (json.JSONDecodeError, TypeError):
+    print('')
+" 2>/dev/null)
+    if [ -n "$msg" ]; then
+      echo "Error ($context): $msg"
+    else
+      echo "Error ($context): Request failed (HTTP $HTTP_CODE)."
+    fi
+    exit 1
+  fi
+}
+
+do_auth() {
+  local domain="$1"
+  local host="$2"
+
+  # Get the zone UUID from zones list
+  api_request GET "$API_BASE/v1/zones"
+  api_error "fetching zones list"
+
+  local success
+  success=$(echo "$REPLY" | python3 -c "
+import json,sys
+try:
+    d=json.load(sys.stdin)
+    print('true' if d.get('success') is True else '')
+except (json.JSONDecodeError, TypeError):
+    print('')
+" 2>/dev/null)
+  if [ "$success" != "true" ]; then
+    local msg
+    msg=$(echo "$REPLY" | python3 -c "
+import json,sys
+try:
+    d=json.load(sys.stdin)
+    print(d.get('message','Unknown error') or 'Unknown error')
+except (json.JSONDecodeError, TypeError):
+    print('Unknown error')
+" 2>/dev/null)
+    echo "Error (zones list): $msg"
+    exit 1
+  fi
+
+  local uuid
+  uuid=$(echo "$REPLY" | domain="$domain" python3 -c "
+import json,sys,os
+try:
+    d=json.load(sys.stdin)
+    domain=os.environ.get('domain','')
+    data=d.get('data') or []
+    for z in data:
+        if z.get('target_domain')==domain:
+            print(z.get('uuid',''))
+            break
+except (json.JSONDecodeError, TypeError, KeyError):
+    pass
+" 2>/dev/null)
+  if [ -z "$uuid" ] || [ "$uuid" = "null" ]; then
+    echo "Error: Zone not found for domain: $domain"
+    echo "Add the domain to Parspack first, or check the domain name."
+    exit 1
+  fi
+
+  # Create TXT record
+  api_request POST "$API_BASE/v2/zones/$uuid/dns-records" \
+    --data '{
+      "host": "'"$host"'",
+      "type": "TXT",
+      "ttl": 60,
+      "proxy": "direct",
+      "record": {"content": "'"$CERTBOT_VALIDATION"'"}
+    }'
+  api_error "creating DNS record"
+
+  local success
+  success=$(echo "$REPLY" | python3 -c "
+import json,sys
+try:
+    d=json.load(sys.stdin)
+    print('true' if d.get('success') is True else '')
+except (json.JSONDecodeError, TypeError):
+    print('')
+" 2>/dev/null)
+  if [ "$success" != "true" ]; then
+    local msg
+    msg=$(echo "$REPLY" | python3 -c "
+import json,sys
+try:
+    d=json.load(sys.stdin)
+    print(d.get('message','Unknown error') or 'Unknown error')
+except (json.JSONDecodeError, TypeError):
+    print('Unknown error')
+" 2>/dev/null)
+    echo "Error (create DNS): $msg"
+    exit 1
+  fi
+
+  # Save info for cleanup
+  if [ ! -d "/tmp/CERTBOT_$CERTBOT_DOMAIN" ]; then
+    mkdir -m 0700 "/tmp/CERTBOT_$CERTBOT_DOMAIN"
+  fi
+  echo "$uuid" > "/tmp/CERTBOT_$CERTBOT_DOMAIN/UUID"
+  echo "$host" > "/tmp/CERTBOT_$CERTBOT_DOMAIN/HOST"
+  echo "$CERTBOT_VALIDATION" > "/tmp/CERTBOT_$CERTBOT_DOMAIN/CONTENT"
+
+  # Sleep to make sure the change has time to propagate over to DNS
+  sleep 25
+}
+
+do_cleanup() {
+  local uuid=""
+  local host=""
+  local content=""
+
+  if [ -f "/tmp/CERTBOT_$CERTBOT_DOMAIN/UUID" ]; then
+    uuid=$(cat "/tmp/CERTBOT_$CERTBOT_DOMAIN/UUID")
+    rm -f "/tmp/CERTBOT_$CERTBOT_DOMAIN/UUID"
+  fi
+
+  if [ -f "/tmp/CERTBOT_$CERTBOT_DOMAIN/HOST" ]; then
+    host=$(cat "/tmp/CERTBOT_$CERTBOT_DOMAIN/HOST")
+    rm -f "/tmp/CERTBOT_$CERTBOT_DOMAIN/HOST"
+  fi
+
+  if [ -f "/tmp/CERTBOT_$CERTBOT_DOMAIN/CONTENT" ]; then
+    content=$(cat "/tmp/CERTBOT_$CERTBOT_DOMAIN/CONTENT")
+    rm -f "/tmp/CERTBOT_$CERTBOT_DOMAIN/CONTENT"
+  fi
+
+  # Remove the challenge TXT record
+  if [ -n "$uuid" ] && [ -n "$host" ] && [ -n "$content" ]; then
+    api_request DELETE "$API_BASE/v2/zones/$uuid/dns-records" \
+      --data '{
+        "host": "'"$host"'",
+        "type": "TXT",
+        "record": {"content": "'"$content"'"}
+      }'
+    # Cleanup failures are logged but don't exit - cert may already be issued
+    if [ "$CURL_EXIT" -ne 0 ] || [ "$HTTP_CODE" = "000" ]; then
+      echo "Warning (cleanup): Connection failed. DNS record may need manual removal."
+    elif [ "$HTTP_CODE" = "401" ]; then
+      echo "Warning (cleanup): Invalid token. DNS record may need manual removal."
+    fi
+  fi
+}
+
+do_run() {
+  if ! echo " $*" | grep -qE ' (-d|--domains) '; then
+    echo "Error: No -d DOMAIN specified."
+    show_help
+    exit 1
+  fi
+
+  exec sudo certbot certonly --manual --preferred-challenges dns \
+    --manual-auth-hook "$SCRIPT_PATH auth" \
+    --manual-cleanup-hook "$SCRIPT_PATH cleanup" \
+    --force-renewal \
+    "$@"
+}
+
+# Main
+# When certbot calls us as hook, first arg is "auth" or "cleanup"
+# Otherwise user gave domain args directly - run certbot
+MODE="${1:-}"
+
+if [ "$MODE" = "auth" ] || [ "$MODE" = "cleanup" ]; then
+  # Called by certbot - skip certbot check (it is already running)
+  check_prerequisites 1
+  # Called by certbot - need CERTBOT_DOMAIN
+  DOMAIN=$(expr "$CERTBOT_DOMAIN" : '.*\.\(.*\..*\)')
+  [ -z "$DOMAIN" ] && DOMAIN="$CERTBOT_DOMAIN"
+  CREATE_DOMAIN="_acme-challenge.$CERTBOT_DOMAIN"
+  HOST="${CREATE_DOMAIN%."$DOMAIN"}"
+
+  case "$MODE" in
+    auth)
+      do_auth "$DOMAIN" "$HOST" || exit 1
+      ;;
+    cleanup)
+      do_cleanup
+      ;;
+  esac
+else
+  # User called directly - show help or run certbot
+  if [ $# -eq 0 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    show_help
+    exit 0
+  fi
+  check_prerequisites 0
+  do_run "$@"
+fi
