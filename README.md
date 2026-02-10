@@ -17,14 +17,15 @@ These days, with heavy internet restrictions in Iran, you often need certificate
 - **Python 3**: Required for JSON parsing (usually pre-installed)
 - **curl**: Required for API requests (usually pre-installed)
 
-## Installation
+## Get & Use
 
-⚡ Simple two-step setup:
+⚡ Simple three steps:
 
 1. Download the script and make it executable (one command):
 
    ```bash
-   wget -O parspackCERT https://raw.githubusercontent.com/azolfagharj/parspackCERT/main/parspackCERT && chmod +x parspackCERT
+   wget -O parspackCERT https://raw.githubusercontent.com/azolfagharj/parspackCERT/main/parspackCERT && \
+   chmod +x parspackCERT
    ```
 
 2. Edit the script and set your Parspack CDN API token:
@@ -32,20 +33,50 @@ These days, with heavy internet restrictions in Iran, you often need certificate
    API_TOKEN="your-parspack-cdn-api-token"
    ```
 
-## Configuration
+3. Run the command for your domain (e.g. yourdomain.ir):
 
-⚙️ One variable to set—that's it:
+   ```bash
+   sudo ./parspackCERT -d "yourdomain.ir"
+   ```
 
-| Variable   | Description                                      |
-|-----------|--------------------------------------------------|
-| API_TOKEN | Parspack CDN API token (get it from Parspack dashboard, CDN section). Required permissions: List of Service, Store a DNS record, Delete a DNS record |
-| API_BASE  | API base URL (default: Parspack production)      |
+### Help
 
-## Usage
+Show usage information:
 
-### Basic Syntax
+```bash
+./parspackCERT
+./parspackCERT --help
+./parspackCERT -h
+```
 
-💻 Simple and intuitive:
+## Certificate Storage
+
+📁 Certificates are saved automatically in the default Certbot location:
+
+```
+/etc/letsencrypt/live/<cert_name>/fullchain.pem
+/etc/letsencrypt/live/<cert_name>/privkey.pem
+```
+
+The certificate name is derived from the first domain you specify.
+
+## How It Works
+
+📖 Behind the scenes, it's straightforward:
+
+1. **User runs script**: Execute `./parspackCERT -d "example.com"` with your domain(s)
+2. **Script runs Certbot**: The script invokes Certbot with manual DNS challenge mode
+3. **Auth hook**: For each domain, Certbot calls the script with `auth` argument
+4. **DNS record creation**: The script uses Parspack API to create `_acme-challenge` TXT record
+5. **Validation**: Let's Encrypt checks the TXT record
+6. **Cleanup hook**: Certbot calls the script with `cleanup` argument
+7. **DNS record removal**: The script deletes the temporary TXT record
+
+## Advanced Usage
+
+For power users and deeper control—wildcards, multiple domains, dry run, and more:
+
+### Syntax
 
 ```bash
 ./parspackCERT -d DOMAIN [-d DOMAIN ...] [CERTBOT_OPTIONS]
@@ -89,26 +120,6 @@ The script accepts the same domain format as Certbot:
 ./parspackCERT -d "example.com" --force-renewal
 ```
 
-### Help
-
-Show usage information:
-
-```bash
-./parspackCERT
-./parspackCERT --help
-./parspackCERT -h
-```
-
-## Certificate Storage
-
-📁 Certificates are saved automatically in the default Certbot location:
-
-```
-/etc/letsencrypt/live/<cert_name>/fullchain.pem
-/etc/letsencrypt/live/<cert_name>/privkey.pem
-```
-
-The certificate name is derived from the first domain you specify.
 
 ## Automatic Renewal
 
@@ -122,17 +133,6 @@ sudo certbot renew --dry-run
 
 For more details, see the [Certbot documentation on automated renewals](https://eff-certbot.readthedocs.io/en/stable/using.html#automated-renewals).
 
-## How It Works
-
-📖 Behind the scenes, it's straightforward:
-
-1. **User runs script**: Execute `./parspackCERT -d "example.com"` with your domain(s)
-2. **Script runs Certbot**: The script invokes Certbot with manual DNS challenge mode
-3. **Auth hook**: For each domain, Certbot calls the script with `auth` argument
-4. **DNS record creation**: The script uses Parspack API to create `_acme-challenge` TXT record
-5. **Validation**: Let's Encrypt checks the TXT record
-6. **Cleanup hook**: Certbot calls the script with `cleanup` argument
-7. **DNS record removal**: The script deletes the temporary TXT record
 
 ## Error Messages
 
