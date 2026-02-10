@@ -1,11 +1,12 @@
-# parspackCERT – Automated SSL Certificates for [Parspack](https://parspack.com/) CDN <a href="https://donate.azolfagharj.ir/"><img src="https://img.shields.io/badge/Donate-Support%20Development-orange?style=for-the-badge" alt="Donate"></a>
-🔒 A simple, fast way to obtain SSL certificates from Let's Encrypt using [Certbot](https://certbot.eff.org/) and the Parspack DNS API. One script, one command—no hassle.
+# ParspackCERT <a href="https://donate.azolfagharj.ir/"><img src="https://img.shields.io/badge/Donate-Support%20Development-orange?style=for-the-badge" alt="Donate"></a>
+
+🔒 Producing and renewing SSL certificates for domains that use [Parspack](https://parspack.com/) CDN. A simple, fast way to get them from Let's Encrypt using [Certbot](https://certbot.eff.org/) and the Parspack DNS API. One script, one command, no trouble.
 
 ## Description
 
-parspackCERT is a single bash script that makes SSL certificate management straightforward. It uses the Parspack DNS API to automatically add the required `_acme-challenge` TXT records for domain validation—no manual DNS work needed.
+parspackCERT is a single bash script that makes SSL certificate management simple. It uses the Parspack DNS API to automatically add the required `_acme-challenge` TXT records for domain validation—no manual DNS work needed.
 
-These days, with heavy internet restrictions in Iran, you often need certificates stored directly on your server. When you need to bypass CDN or turn off proxy mode temporarily, you want your site to work without interruption. This script handles that simply: download, configure once, and you're done. It works for both manual runs and automatic renewal with Certbot.
+These days, with heavy internet restrictions in Iran, you often need certificates stored directly on your server. When you need to bypass CDN or turn off proxy mode temporarily, you want your site to work without stopping. This script handles that simply: download, configure once, and you're done. It works for both manual runs and automatic renewal with Certbot.
 
 ## Requirements
 
@@ -58,11 +59,11 @@ Show usage information:
 /etc/letsencrypt/live/<cert_name>/privkey.pem
 ```
 
-The certificate name is derived from the first domain you specify.
+The certificate name is comes from the first domain you specify.
 
 ## How It Works
 
-📖 Behind the scenes, it's straightforward:
+📖 Behind the scenes, it's simple:
 
 1. **User runs script**: Execute `./parspackCERT -d "example.com"` with your domain(s)
 2. **Script runs Certbot**: The script invokes Certbot with manual DNS challenge mode
@@ -74,7 +75,7 @@ The certificate name is derived from the first domain you specify.
 
 ## Advanced Usage
 
-For power users and deeper control—wildcards, multiple domains, dry run, and more:
+For advanced users and deeper control—wildcards, multiple domains, dry run, and more:
 
 ### Syntax
 
@@ -88,19 +89,19 @@ The script accepts the same domain format as Certbot:
 
 | Format            | Example                        | Description                          |
 |-------------------|--------------------------------|--------------------------------------|
-| Single domain     | `-d "example.com"`             | Apex domain only                     |
+| Single domain     | `-d "example.com"`             | Main domain only                     |
 | Wildcard          | `-d "*.example.com"`           | Covers all subdomains                |
 | Multiple domains  | `-d "a.com" -d "b.com"`       | Add multiple domains with repeated -d|
 | Comma-separated   | `-d "a.com,b.com,c.com"`      | Alternative to multiple -d flags      |
 
 ### Examples
 
-**Apex domain only:**
+**Main domain only:**
 ```bash
 ./parspackCERT -d "yourdomain.com"
 ```
 
-**Wildcard and apex (covers example.com and *.example.com):**
+**Wildcard and main domain (covers example.com and *.example.com):**
 ```bash
 ./parspackCERT -d "*.example.com" -d "example.com"
 ```
@@ -123,7 +124,7 @@ The script accepts the same domain format as Certbot:
 
 ## Automatic Renewal
 
-🔄 Set it once and forget it. Certbot schedules automatic renewal (typically twice daily). The script stores the auth and cleanup hooks in the renewal configuration, so Certbot automatically uses parspackCERT—no repeat setup needed.
+🔄 Set it once and forget it. Certbot schedules automatic renewal (usually twice daily). The script stores the auth and cleanup hooks in the renewal configuration, so Certbot automatically uses parspackCERT—no repeat setup needed.
 
 To test renewal without making changes:
 
