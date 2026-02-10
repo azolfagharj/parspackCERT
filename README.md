@@ -1,12 +1,15 @@
-# parspackCERT – Automated SSL Certificates for [Parspack](https://parspack.com/) CDN
-
-Obtain SSL certificates from Let's Encrypt using [Certbot](https://certbot.eff.org/) and the Parspack DNS API. This script automates the DNS-01 challenge by creating and removing TXT records through the Parspack CDN API when Certbot requests them.
+# parspackCERT – Automated SSL Certificates for [Parspack](https://parspack.com/) CDN <a href="https://donate.azolfagharj.ir/"><img src="https://img.shields.io/badge/Donate-Support%20Development-orange?style=for-the-badge" alt="Donate"></a>
+🔒 A simple, fast way to obtain SSL certificates from Let's Encrypt using [Certbot](https://certbot.eff.org/) and the Parspack DNS API. One script, one command—no hassle.
 
 ## Description
 
-parspackCERT is a single bash script that integrates with Certbot to obtain and renew SSL certificates. It uses the Parspack DNS API to automatically add the required `_acme-challenge` TXT records for domain validation. The script handles both manual execution and automatic renewal when Certbot runs its scheduled tasks.
+parspackCERT is a single bash script that makes SSL certificate management straightforward. It uses the Parspack DNS API to automatically add the required `_acme-challenge` TXT records for domain validation—no manual DNS work needed.
+
+These days, with heavy internet restrictions in Iran, you often need certificates stored directly on your server. When you need to bypass CDN or turn off proxy mode temporarily, you want your site to work without interruption. This script handles that simply: download, configure once, and you're done. It works for both manual runs and automatic renewal with Certbot.
 
 ## Requirements
+
+📋 Before you start:
 
 - **[Parspack account](https://my.parspack.com/main/auth/log-in)**: Your domain must be added to the Parspack dashboard
 - **Parspack CDN API token**: You can get it from the Parspack dashboard, CDN section. The token must have these permissions: *List of Service*, *Store a DNS record*, *Delete a DNS record*
@@ -16,16 +19,22 @@ parspackCERT is a single bash script that integrates with Certbot to obtain and 
 
 ## Installation
 
-1. Place the `parspackCERT` script in your project directory
-2. Make it executable: `chmod +x parspackCERT`
-3. Edit the script and set your Parspack CDN API token:
+⚡ Simple two-step setup:
+
+1. Download the script and make it executable (one command):
+
+   ```bash
+   wget -O parspackCERT https://raw.githubusercontent.com/azolfagharj/parspackCERT/main/parspackCERT && chmod +x parspackCERT
+   ```
+
+2. Edit the script and set your Parspack CDN API token:
    ```bash
    API_TOKEN="your-parspack-cdn-api-token"
    ```
 
 ## Configuration
 
-Open the script and configure the following variable:
+⚙️ One variable to set—that's it:
 
 | Variable   | Description                                      |
 |-----------|--------------------------------------------------|
@@ -35,6 +44,8 @@ Open the script and configure the following variable:
 ## Usage
 
 ### Basic Syntax
+
+💻 Simple and intuitive:
 
 ```bash
 ./parspackCERT -d DOMAIN [-d DOMAIN ...] [CERTBOT_OPTIONS]
@@ -90,7 +101,7 @@ Show usage information:
 
 ## Certificate Storage
 
-Certificates are saved in the default Certbot location:
+📁 Certificates are saved automatically in the default Certbot location:
 
 ```
 /etc/letsencrypt/live/<cert_name>/fullchain.pem
@@ -101,7 +112,7 @@ The certificate name is derived from the first domain you specify.
 
 ## Automatic Renewal
 
-Certbot schedules automatic renewal (typically twice daily). The script stores the auth and cleanup hooks in the renewal configuration, so Certbot will automatically use parspackCERT when renewing certificates.
+🔄 Set it once and forget it. Certbot schedules automatic renewal (typically twice daily). The script stores the auth and cleanup hooks in the renewal configuration, so Certbot automatically uses parspackCERT—no repeat setup needed.
 
 To test renewal without making changes:
 
@@ -113,7 +124,9 @@ For more details, see the [Certbot documentation on automated renewals](https://
 
 ## How It Works
 
-1. **User runs script**: You execute `./parspackCERT -d "example.com"` with your domain(s)
+📖 Behind the scenes, it's straightforward:
+
+1. **User runs script**: Execute `./parspackCERT -d "example.com"` with your domain(s)
 2. **Script runs Certbot**: The script invokes Certbot with manual DNS challenge mode
 3. **Auth hook**: For each domain, Certbot calls the script with `auth` argument
 4. **DNS record creation**: The script uses Parspack API to create `_acme-challenge` TXT record
@@ -123,7 +136,7 @@ For more details, see the [Certbot documentation on automated renewals](https://
 
 ## Error Messages
 
-The script provides clear error messages for common issues:
+⚠️ The script provides clear error messages for common issues:
 
 | Error                           | Cause                          | Solution                                  |
 |---------------------------------|--------------------------------|-------------------------------------------|
@@ -135,6 +148,8 @@ The script provides clear error messages for common issues:
 | python3 not found               | Python 3 missing               | Run `sudo apt install python3`            |
 
 ## Troubleshooting
+
+🔧 Common fixes:
 
 **Certificate not renewing automatically:**
 - Check Certbot timer: `sudo systemctl status certbot.timer`
@@ -150,4 +165,15 @@ The script provides clear error messages for common issues:
 
 ## License
 
-This script is provided as-is for use with Parspack CDN and Let's Encrypt certificates.
+📄 MIT License. See [LICENSE](LICENSE) for details. Simple, fast, reliable.
+
+---
+## Support this Project
+
+
+
+ 🤝 **Enjoying this free project?** <a href="https://donate.azolfagharj.ir/">Consider supporting</a> its development
+
+<a href="https://donate.azolfagharj.ir/"><img src="https://img.shields.io/badge/Donate-Support%20Development-orange?style=for-the-badge" alt="Donate"></a>
+
+---
