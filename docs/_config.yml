@@ -5,3 +5,6 @@ title: ParspackCERT
 description: Automatically issue and renew Let's Encrypt SSL certificates using Parspack DNS API and Certbot DNS-01 challenge.
 
 show_downloads: true
+
+plugins:
+  - jekyll-seo-tag
