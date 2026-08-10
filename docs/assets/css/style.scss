@@ -1,0 +1,14 @@
+---
+---
+
+@import "{{ site.theme }}";
+
+.main-content {
+  max-width: 1400px;
+}
+
+@media screen and (min-width: 64em) {
+  .main-content {
+    padding: 2rem 3rem;
+  }
+}
