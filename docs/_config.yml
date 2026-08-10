@@ -2,4 +2,4 @@ theme: jekyll-theme-cayman
 
 title: ParspackCERT
 
-description: Automatic Let's Encrypt SSL certificates using Parspack DNS API
+description: Automatically issue and renew Let's Encrypt SSL certificates using Parspack DNS API and Certbot.
