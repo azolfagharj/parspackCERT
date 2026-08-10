@@ -1,10 +1,14 @@
+# ParspackCERT – Let's Encrypt SSL Certificates with Parspack DNS API
 # ParspackCERT <a href="https://azolfagharj.github.io/donate/"><img src="https://img.shields.io/badge/Donate-Support%20Development-orange?style=for-the-badge" alt="Donate"></a>
 
 🔒 Producing and renewing SSL certificates for domains that use [Parspack](https://parspack.com/) CDN. A simple, fast way to get them from Let's Encrypt using [Certbot](https://certbot.eff.org/) and the Parspack DNS API. One script, one command, no trouble.
 
+Automatically obtain and renew Let's Encrypt SSL/TLS certificates using the Parspack DNS API and Certbot DNS-01 challenge.
+ParspackCERT is a Bash script for automatically creating and removing_acme-challenge TXT records through the Parspack CDN API.
+
 ## Description
 
-parspackCERT is a single bash script that makes SSL certificate management simple. It uses the Parspack DNS API to automatically add the required `_acme-challenge` TXT records for domain validation—no manual DNS work needed.
+parspackCERT is a single bash script that makes SSL certificate management simple. It uses the Parspack DNS API to automatically add the required `_acme-challenge` TXT records for domain validation—no manual DNS work needed.d
 
 These days, with heavy internet restrictions in Iran, you often need certificates stored directly on your server. When you need to bypass CDN or turn off proxy mode temporarily, you want your site to work without stopping. This script handles that simply: download, configure once, and you're done. It works for both manual runs and automatic renewal with Certbot.
 
