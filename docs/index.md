@@ -9,10 +9,8 @@ description: Automatically issue and renew Let's Encrypt SSL certificates using 
 
 🔒 Producing and renewing SSL certificates for domains that use Parspack CDN.
 
-...
 
-# ParspackCERT – Let's Encrypt SSL Certificates with Parspack DNS API
-# ParspackCERT <a href="https://azolfagharj.github.io/donate/"><img src="https://img.shields.io/badge/Donate-Support%20Development-orange?style=for-the-badge" alt="Donate"></a>
+# <a href="https://azolfagharj.github.io/donate/"><img src="https://img.shields.io/badge/Donate-Support%20Development-orange?style=for-the-badge" alt="Donate"></a>
 
 🔒 Producing and renewing SSL certificates for domains that use [Parspack](https://parspack.com/) CDN. A simple, fast way to get them from Let's Encrypt using [Certbot](https://certbot.eff.org/) and the Parspack DNS API. One script, one command, no trouble.
 
